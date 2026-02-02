@@ -4,7 +4,7 @@
 
 一款现代、优雅的PDF文件合并工具，采用Windows 11设计风格，支持拖拽操作和批量处理。
 
-![1769483180622](../../../AppData/Roaming/Typora/typora-user-images/1769483180622.png)
+![1769483180622](image.png)
 
 ## ✨ 特性亮
 
@@ -105,6 +105,7 @@ app.run(
     debug=True         # 调试模式
 )
 ```
+
 
 
 
