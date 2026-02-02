@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF拖拽合并工具</title>
+    <style>
+        body { max-width: 800px; margin: 50px auto; padding: 20px; }
+        .container { 
+            border: 3px dashed #4CAF50;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .container.dragover {
+            border-color: #2196F3;
+            background-color: #f0f8ff;
+        }
+        .drop-area {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+        }
+        .file-list {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            min-height: 100px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .file-item button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .upload-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .upload-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="dropZone">
+        <h2>📄 PDF合并工具</h2>
+        <p>拖拽PDF文件到这里，或点击选择文件</p>
+        <p style="font-size: 14px; color: #666;">支持多选，可重复添加</p>
+        <input type="file" id="fileInput" multiple accept=".pdf" style="display:none;">
+    </div>
+    
+    <div class="drop-area">
+        <h3>已选文件列表（按合并顺序）</h3>
+        <div id="fileList" class="file-list">
+            <p style="color: #999; text-align: center; margin: 30px 0;">暂无文件</p>
+        </div>
+        <button id="uploadBtn" class="upload-btn" disabled>开始合并 PDF</button>
+    </div>
+
+    <script>
+    // 全局文件存储
+    let selectedFiles = [];
+    let selectedNames = [];
+
+    // 获取DOM元素
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    // 点击容器触发文件选择
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // 拖拽事件处理
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleDrop(e);
+    });
+
+    // 处理拖拽文件
+    function handleDrop(e) {
+        const newFiles = Array.from(e.dataTransfer.files).filter(file => 
+            file.type === 'application/pdf'
+        );
+        
+        // 过滤掉已存在的文件（按文件名判断）
+        const uniqueNewFiles = newFiles.filter(file => 
+            !selectedNames.includes(file.name)
+        );
+        
+        if (uniqueNewFiles.length > 0) {
+            selectedFiles.push(...uniqueNewFiles);
+            selectedNames.push(...uniqueNewFiles.map(file => file.name));
+            renderFileList();
+        } else if (newFiles.length > 0) {
+            alert('文件已存在列表中！');
+        }
+    }
+
+    // 处理文件选择
+    fileInput.addEventListener('change', (e) => {
+        const newFiles = Array.from(e.target.files).filter(file => 
+            file.type === 'application/pdf'
+        );
+        
+        const uniqueNewFiles = newFiles.filter(file => 
+            !selectedNames.includes(file.name)
+        );
+        
+        if (uniqueNewFiles.length > 0) {
+            selectedFiles.push(...uniqueNewFiles);
+            selectedNames.push(...uniqueNewFiles.map(file => file.name));
+            renderFileList();
+        } else if (newFiles.length > 0) {
+            alert('文件已存在列表中！');
+        }
+        
+        // 重置input以便可以选择相同文件
+        fileInput.value = '';
+    });
+
+    // 渲染文件列表
+    function renderFileList() {
+        if (selectedFiles.length === 0) {
+            fileList.innerHTML = '<p style="color: #999; text-align: center; margin: 30px 0;">暂无文件</p>';
+            uploadBtn.disabled = true;
+            return;
+        }
+
+        fileList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div>
+                    <strong>${index + 1}.</strong> ${file.name}
+                    <span style="color: #666; font-size: 12px; margin-left: 10px;">
+                        (${(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                </div>
+                <button onclick="removeFile(${index})" title="移除">×</button>
+            `;
+            fileList.appendChild(fileItem);
+        });
+        
+        uploadBtn.disabled = false;
+    }
+
+    // 删除文件
+    window.removeFile = function(index) {
+        selectedFiles.splice(index, 1);
+        selectedNames.splice(index, 1);
+        renderFileList();
+    }
+
+    // 上传合并
+    uploadBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) {
+            alert('请先添加PDF文件！');
+            return;
+        }
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = '合并中...';
+
+        try {
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('pdf_files', file));
+            
+            const response = await fetch('/merge', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`上传失败: ${errorText}`);
+            }
+            
+            const blob = await response.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'merged.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+            
+            // 可选：合并成功后清空列表
+             selectedFiles = [];
+             selectedNames = [];
+             renderFileList();
+            
+        } catch (error) {
+            alert('合并失败: ' + error.message);
+            console.error('合并错误:', error);
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '开始合并 PDF';
+        }
+    });
+
+    // 初始化
+    renderFileList();
+    </script>
+</body>
+</html>
